@@ -1,5 +1,5 @@
 
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BooksService } from './services/books';
 import { Book } from './models/book';
@@ -17,11 +17,20 @@ export class App implements OnInit {
   private readonly booksService = inject(BooksService);
 
   books = signal<Book[]>([]);
+
+  currentPage = signal(1);
+  pageSize = 10;
+  totalCount = signal(0);
+
+  totalPages = computed(() => Math.ceil(this.totalCount() / this.pageSize)
+  );
+
   loading = signal(true);
   errorMessage = signal('');
 
   uploading = signal(false);
   uploadMessage = signal('');
+  uploadError = signal(false);
   isDragging = signal(false);
 
 
@@ -41,13 +50,16 @@ export class App implements OnInit {
       return;
     }
 
+    this.uploadError.set(false);
+    this.uploadMessage.set('');
+
     if (!file.name.toLowerCase().endsWith('.csv')) {
-      this.uploadMessage.set('Please select a CSV file.');
+      this.uploadError.set(true);
+      this.uploadMessage.set('Invalid file format. Please upload a CSV file.');
       return;
     }
 
     this.uploading.set(true);
-    this.uploadMessage.set('');
 
     this.booksService.importBooks(file).subscribe({
       next: (response) => {
@@ -55,17 +67,20 @@ export class App implements OnInit {
           `${response.acceptedRows} books accepted for import.`
         );
 
+        this.uploadError.set(false);
         this.uploading.set(false);
+
         this.refreshBooksAfterImport();
       },
       error: (error) => {
         console.error('Failed to import books:', error);
+
+        this.uploadError.set(true);
         this.uploadMessage.set('Failed to import CSV file.');
         this.uploading.set(false);
       }
     });
   }
-
 
   onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -95,45 +110,58 @@ export class App implements OnInit {
   ngOnInit(): void {
     this.loadBooks();
   }
-  // COMM
-  // loadbooks este apelat dupa import pentru ca API-ul publica mesajele in RabbitMQ
-  // iar workerul le salveaza asincron 
-  // asta se face pentru ca lista sa nu fie reincarcata inainte ca workerul sa termine procesarea 
-  // pentru moment avem butonul referresh, ulterior o sa facem actualizare automata. 
 
   loadBooks(): void {
     this.loading.set(true);
     this.errorMessage.set('');
 
-    this.booksService.getBooks().subscribe({
-      next: (books) => {
-        console.log('Books received from API:', books);
-
-        this.books.set(books);
-        this.loading.set(false);
-      },
-      error: (error) => {
-        console.error('Failed to load books:', error);
-
-        this.errorMessage.set('Nu am putut încărca lista cărților.');
-        this.loading.set(false);
-      }
-    });
+    this.booksService
+      .getPagedBooks(this.currentPage(), this.pageSize)
+      .subscribe({
+        next: (result) => {
+          this.books.set(result.items);
+          this.totalCount.set(result.totalCount);
+          this.loading.set(false);
+        },
+        error: (error) => {
+          console.error('Failed to load books:', error);
+          this.errorMessage.set('Failed to load books.');
+          this.loading.set(false);
+        }
+      });
   }
 
-  // COMM 
-  // asteapta 500ms si reincarca lista la fiecare secunda 
-  // face maxim 5 cereri
-  // actualizeaza tabelul automat pe masura de workerul salveaza cartile 
+  changePage(page: number): void {
+    if (
+      page < 1 ||
+      page > this.totalPages() ||
+      page === this.currentPage() ||
+      this.loading()
+    ) {
+      return;
+    }
+
+    this.currentPage.set(page);
+    this.loadBooks();
+  }
+
   refreshBooksAfterImport(): void {
+    this.currentPage.set(1);
+
     timer(500, 1000)
       .pipe(
         take(5),
-        switchMap(() => this.booksService.getBooks())
+        switchMap(() =>
+          this.booksService.getPagedBooks(
+            this.currentPage(),
+            this.pageSize
+          )
+        )
       )
       .subscribe({
-        next: (books) => {
-          this.books.set(books);
+        next: (result) => {
+          this.books.set(result.items);
+          this.totalCount.set(result.totalCount);
           this.loading.set(false);
         },
         error: (error) => {

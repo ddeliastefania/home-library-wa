@@ -21,4 +21,16 @@ public class BooksController : Controller
 
         return Ok(books);
     }
+
+    [HttpGet("paged")]
+    public async Task<ActionResult<PagedResult<BookDto>>> GetPagedBooks([FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
+    {
+        if (page < 1 || pageSize < 1 || pageSize > 100)
+        {
+            return BadRequest("Invalid pagination parameters.");
+        }
+
+        var result = await _bookService.GetPagedBooksAsync(page, pageSize, cancellationToken);
+        return Ok(result);
+    }
 }

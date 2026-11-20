@@ -25,11 +25,24 @@ builder.Services.AddOptions<RabbitMqOptions>()
 
 var host = builder.Build();
 
-await using (var scope = host.Services.CreateAsyncScope())
+var logger = host.Services.GetRequiredService<ILogger<Program>>();
+
+while (true)
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
-    await dbContext.Database.MigrateAsync();
+    try
+    {
+        await using var scope = host.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
+        await dbContext.Database.MigrateAsync();
+
+        logger.LogInformation("Database migrations applied successfully.");
+        break;
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "PostgreSQL is not ready. Retrying in 5 seconds.");
+        await Task.Delay(TimeSpan.FromSeconds(5));
+    }
 }
 
 await host.RunAsync();
-host.Run();

@@ -82,10 +82,5 @@ services:
       - api
     restart: unless-stopped
      
-  #   ports:
-  #     - "4200:80"
-  #   depends_on:
-  #     - api
-
 volumes:
   postgres-data:

@@ -1,6 +1,5 @@
 <main class="mx-auto max-w-6xl px-4 py-10">
 
-  <!-- Header -->
   <header class="mb-8">
     <h1 class="text-4xl font-bold text-blue-600">
       Home Library
@@ -11,7 +10,6 @@
     </p>
   </header>
 
-  <!-- CSV Upload -->
   <section class="mb-8 rounded-xl bg-white p-6 shadow-sm">
     <h2 class="mb-2 text-2xl font-semibold text-slate-800">
       Import books
@@ -49,13 +47,15 @@
     }
 
     @if (uploadMessage()) {
-    <p class="mt-4 text-sm text-slate-700">
+    <div role="alert" class="mt-4 rounded-lg border px-4 py-3 text-sm" [class.border-red-200]="uploadError()"
+      [class.bg-red-50]="uploadError()" [class.text-red-700]="uploadError()" [class.border-green-200]="!uploadError()"
+      [class.bg-green-50]="!uploadError()" [class.text-green-700]="!uploadError()">
+
       {{ uploadMessage() }}
-    </p>
+    </div>
     }
   </section>
 
-  <!-- Books List -->
   <section class="rounded-xl bg-white p-6 shadow-sm">
 
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -137,6 +137,35 @@
         </tbody>
 
       </table>
+    </div>
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+
+      <p class="text-sm text-slate-500">
+        Showing
+        {{ (currentPage() - 1) * pageSize + 1 }}–{{ currentPage() * pageSize < totalCount() ? currentPage() * pageSize :
+          totalCount() }} of {{ totalCount() }} unique books </p>
+
+          <div class="flex items-center gap-3">
+
+            <button type="button" (click)="changePage(currentPage() - 1)" [disabled]="currentPage() === 1 || loading()"
+              class="rounded-lg border border-slate-300 px-4 py-2 text-sm
+             font-medium text-slate-700 hover:bg-slate-50
+             disabled:cursor-not-allowed disabled:opacity-40">
+              Previous
+            </button>
+
+            <span class="text-sm text-slate-600">
+              Page {{ currentPage() }} of {{ totalPages() }}
+            </span>
+
+            <button type="button" (click)="changePage(currentPage() + 1)"
+              [disabled]="currentPage() >= totalPages() || loading()" class="rounded-lg border border-slate-300 px-4 py-2 text-sm
+             font-medium text-slate-700 hover:bg-slate-50
+             disabled:cursor-not-allowed disabled:opacity-40">
+              Next
+            </button>
+
+          </div>
     </div>
     }
 

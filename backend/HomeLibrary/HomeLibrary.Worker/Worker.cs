@@ -24,33 +24,47 @@ public class Worker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var factory = CreateConnectionFactory();
-
-        await using var connection = await factory.CreateConnectionAsync(stoppingToken);
-
-        await using var channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
-
-        await ConfigureChannelAsync(channel, stoppingToken);
-
-        var consumer = new AsyncEventingBasicConsumer(channel);
-
-        consumer.ReceivedAsync += (_, args) => HandleMessageAsync(channel, args, stoppingToken);
-
-        await channel.BasicConsumeAsync(
-            queue: QueueName,
-            autoAck: false,
-            consumer: consumer,
-            cancellationToken: stoppingToken);
-
-        _logger.LogInformation("Worker is listening for book imports.");
-
-        try
+        while (!stoppingToken.IsCancellationRequested)
         {
-            await Task.Delay(Timeout.InfiniteTimeSpan, stoppingToken);
+            try
+            {
+                await using var connection = await factory.CreateConnectionAsync(stoppingToken);
+                await using var channel = await connection.CreateChannelAsync(cancellationToken: stoppingToken);
+
+                await ConfigureChannelAsync(channel, stoppingToken);
+
+                var consumer = new AsyncEventingBasicConsumer(channel);
+                consumer.ReceivedAsync += (_, args) => HandleMessageAsync(channel, args, stoppingToken);
+
+                await channel.BasicConsumeAsync(
+                    queue: QueueName,
+                    autoAck: false,
+                    consumer: consumer,
+                    cancellationToken: stoppingToken);
+
+                _logger.LogInformation("Worker is listening for book imports.");
+                await Task.Delay(Timeout.InfiniteTimeSpan, stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "RabbitMQ is unavailable. Retrying in 5 seconds.");
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
         }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
-            _logger.LogInformation("Worker is stopping.");
-        }
+
+        _logger.LogInformation("Worker is stopping.");
     }
 
     private ConnectionFactory CreateConnectionFactory()
