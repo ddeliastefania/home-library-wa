@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="HomeLibrary.API/HomeLibrary.API.csproj" />
+  <Project Path="HomeLibrary.Contracts/HomeLibrary.Contracts.csproj" />
+  <Project Path="HomeLibrary.Persistence/HomeLibrary.Persistence.csproj" />
+  <Project Path="HomeLibrary.Worker/HomeLibrary.Worker.csproj" />
+</Solution>

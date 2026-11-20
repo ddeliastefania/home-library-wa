@@ -1,0 +1,145 @@
+<main class="mx-auto max-w-6xl px-4 py-10">
+
+  <!-- Header -->
+  <header class="mb-8">
+    <h1 class="text-4xl font-bold text-blue-600">
+      Home Library
+    </h1>
+
+    <p class="mt-2 text-slate-500">
+      Import and manage your book collection.
+    </p>
+  </header>
+
+  <!-- CSV Upload -->
+  <section class="mb-8 rounded-xl bg-white p-6 shadow-sm">
+    <h2 class="mb-2 text-2xl font-semibold text-slate-800">
+      Import books
+    </h2>
+
+    <p class="mb-5 text-slate-500">
+      Upload a CSV file containing name, author and genre.
+    </p>
+
+    <div class="rounded-xl border-2 border-dashed p-10 text-center transition-colors"
+      [class.border-blue-500]="isDragging()" [class.bg-blue-50]="isDragging()" [class.border-slate-300]="!isDragging()"
+      [class.bg-slate-50]="!isDragging()" [class.opacity-50]="uploading()" (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+      <div class="mb-3 text-5xl">📁</div>
+
+      <p class="mb-2 font-medium text-slate-700">
+        Drag and drop your CSV file here
+      </p>
+
+      <p class="mb-4 text-sm text-slate-400">
+        or
+      </p>
+
+      <input type="file" accept=".csv" class="mx-auto block max-w-full text-sm text-slate-600
+               file:mr-4 file:rounded-lg file:border-0
+               file:bg-blue-600 file:px-4 file:py-2
+               file:font-medium file:text-white
+               hover:file:bg-blue-700" [disabled]="uploading()" (change)="onFileSelected($event)" />
+    </div>
+
+    @if (uploading()) {
+    <p class="mt-4 text-sm text-blue-600">
+      Uploading CSV...
+    </p>
+    }
+
+    @if (uploadMessage()) {
+    <p class="mt-4 text-sm text-slate-700">
+      {{ uploadMessage() }}
+    </p>
+    }
+  </section>
+
+  <!-- Books List -->
+  <section class="rounded-xl bg-white p-6 shadow-sm">
+
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-semibold text-slate-800">
+          Imported books
+        </h2>
+
+        <p class="mt-1 text-sm text-slate-500">
+          Books stored in your library
+        </p>
+      </div>
+
+      <button type="button" (click)="loadBooks()" [disabled]="loading()" class="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white
+               transition-colors hover:bg-blue-700
+               disabled:cursor-not-allowed disabled:opacity-50">
+        Refresh
+      </button>
+    </div>
+
+    @if (loading()) {
+    <p class="py-8 text-center text-slate-500">
+      Loading books...
+    </p>
+    } @else if (errorMessage()) {
+    <p class="rounded-lg bg-red-50 p-4 text-red-700">
+      {{ errorMessage() }}
+    </p>
+    } @else if (books().length === 0) {
+    <p class="py-8 text-center text-slate-500">
+      No books imported yet.
+    </p>
+    } @else {
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse text-left">
+
+        <thead>
+          <tr class="border-b border-slate-200 bg-slate-50">
+            <th class="px-4 py-3 text-sm font-semibold text-slate-700">
+              Name
+            </th>
+
+            <th class="px-4 py-3 text-sm font-semibold text-slate-700">
+              Author
+            </th>
+
+            <th class="px-4 py-3 text-sm font-semibold text-slate-700">
+              Genre
+            </th>
+
+            <th class="px-4 py-3 text-sm font-semibold text-slate-700">
+              Import date
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (book of books(); track book.id) {
+          <tr class="border-b border-slate-100 hover:bg-slate-50">
+
+            <td class="px-4 py-3 font-medium text-slate-800">
+              {{ book.name }}
+            </td>
+
+            <td class="px-4 py-3 text-slate-600">
+              {{ book.author }}
+            </td>
+
+            <td class="px-4 py-3 text-slate-600">
+              {{ book.genre }}
+            </td>
+
+            <td class="px-4 py-3 text-sm text-slate-500">
+              {{ book.importDate | date:'medium' }}
+            </td>
+
+          </tr>
+          }
+        </tbody>
+
+      </table>
+    </div>
+    }
+
+  </section>
+
+</main>
